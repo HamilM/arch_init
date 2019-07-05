@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -x
+dialog --title "Welcome" --nocancel --msgbox "Welcome to Matan Arch installation!" 30 80
+
+#set up keys
+loadkeys -d 
+KEYMAP=$(dialog --noitem --nocancel --radiolist "Pick a keyboard layout" 100 80 50 "Default" ON $(find /usr/share/kbd/keymaps/ -iname "*.map.gz" | sed -r 's_^.*/([^/]+)\.map\.gz$_\1 OFF _g' | tr -d '\n') 3>&1 1>&2 2>&3)
+[ -n "$KEYMAP" -a "$KEYMAP" != "Default" ] && loadkeys "$KEYMAP"
+
+# set up internet connectivity
+HAS_CONNECTION=0
+if ! $(ping -c 1 -W 2 8.8.8.8 2>&1 1>&-); then
+	WIFI_DEV=$(echo /sys/class/net/*/wireless | head -n 1)
+	[ -z ${WIFI_DEV} ] && dialog --title "Error!" --msgbox 100 80 "Can't setup internet connectivity"  && exit -1
+	dialog --title "Setting up wire--msgbox "Y
+	wifi-menu ${WIFI_DEV}
+fi
+
+#set up ntp
+timedatectl set-ntp true
+
+#set up disks
+dialog --backtitle "Setting up partitions..." --nocancel --noitem --radiolist "Choose Device" 30 30 25 $(lsblk -P | grep 'TYPE="disk"' | sed -r 's/^NAME="([^"]+)".*$/\1 0 /g' | tr -d '\n')
+
